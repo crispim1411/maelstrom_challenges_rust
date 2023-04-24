@@ -1,6 +1,7 @@
 # Maelstrom Challenges
+Solução dos exercícios de Sistemas Distribuidos disponíveis em [fly.io/dist-sys](https://fly.io/dist-sys/)
 
-## Echo
-Implementar um sistema que receba e devolva um pacote apenas trocando tipo de mensagem de echo para echo_ok
+## #1 Echo
+Implementar um sistema que receba e devolva o pacote. O tipo da mensagem deverá ser alterado de 'echo' para 'echo_ok'.
 
 
