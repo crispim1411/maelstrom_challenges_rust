@@ -6,4 +6,7 @@ Implementar um sistema que receba e devolva o pacote. O tipo da mensagem deverá
 
 [solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/echo/src/main.rs)
 
+## #2 Unique Id
+Utilizando do mesma sistema anterior responder a mensagem 'generate' com 'generate_ok' retornando um Id único global.
 
+[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/unique_id/src/main.rs)
