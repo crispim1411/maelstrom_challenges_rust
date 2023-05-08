@@ -10,3 +10,10 @@ Implementar um sistema que receba e devolva o pacote. O tipo da mensagem deverá
 Utilizando do mesma sistema anterior responder a mensagem 'generate' com 'generate_ok' retornando um Id único global.
 
 [solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/unique_id/src/main.rs)
+
+## #3 Broadcast
+Implementar um sitema de broadcast para a fofoca circular entre todos os nodes do cluster.
+
+### 3a - Single Node
+
+[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/broadcast/src/main.rs)
