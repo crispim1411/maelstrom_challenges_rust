@@ -4,7 +4,7 @@ Solução dos exercícios de Sistemas Distribuidos disponíveis em [fly.io/dist-
 ## #1 Echo
 Implementar um sistema que receba e devolva o pacote. O tipo da mensagem deverá ser alterado de 'echo' para 'echo_ok'.
 
-[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/echo/src/main.rs)
+[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/dist-sys-rust/src/bin/echo.rs)
 
 Run:
 ```
@@ -14,7 +14,7 @@ Run:
 ## #2 Unique Id
 Utilizando do mesma sistema anterior responder a mensagem 'generate' com 'generate_ok' retornando um Id único global.
 
-[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/unique_id/src/main.rs)
+[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/dist-sys-rust/src/bin/unique_id.rs)
 
 Run:
 ```
@@ -25,7 +25,7 @@ Run:
 ## #3 Broadcast
 Implementar um sitema de broadcast para a fofoca circular entre todos os nodes do cluster.
 
-[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/broadcast/src/main.rs)
+[solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/dist-sys-rust/src/bin/broadcast.rs)
 
 ### 3a - Single Node
 Primeiro cenário apenas considerando um sistema de um Node.

@@ -24,22 +24,17 @@ enum Payload {
     },
     // Responses
     InitOk {
-
         in_reply_to: usize,
     },
     BroadcastOk {
-
         in_reply_to: usize,
     },
     ReadOk { 
         in_reply_to: usize,
-
         messages: Vec<usize> 
     },
     TopologyOk {
-
         in_reply_to: usize,
-
     },
 }
 
