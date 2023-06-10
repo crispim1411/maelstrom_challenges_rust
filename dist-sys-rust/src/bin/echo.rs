@@ -77,7 +77,9 @@ impl Node {
                 reply.body.payload = Payload::EchoOk { echo };
                 reply.send(output)?;
             }
-            Payload::EchoOk { .. } => { bail!("Should not receive echo_ok message") },
+            Payload::EchoOk { .. } => { 
+                bail!("Should not receive generate_ok message at Node {}", self.node_id)
+            }
         };
         self.id += 1;
         Ok(())
@@ -105,7 +107,7 @@ fn main() -> anyhow::Result<()> {
     for line in stdin {
             let input: Message<Payload> = serde_json::from_str(&line?)?;
         node.process(input, &mut stdout)
-            .expect("Error processing message");
+            .unwrap_or_else(|_| panic!("Error processing message at Node {}", node.node_id));
         node.id += 1;
     }
     Ok(())
