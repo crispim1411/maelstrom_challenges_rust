@@ -149,31 +149,35 @@ impl Node {
             }
             Event::Gossip => {
                 for node in &self.neighborhood {
-                    let reply = self.create_gossip(node);
-                    reply.send(output)?;
+                    if let Some(gossip) = self.create_gossip(node) {
+                        gossip.send(output)?;
+                    }
                 }
             }
         }
         Ok(())
     }
 
-    fn create_gossip(&self, node: &String) -> Message<Payload> {
-        let known_to_n = &self.known[node];
-        Message {
-            src: self.node_id.clone(),
-            dst: node.clone(),
-            body: Body {
-                msg_id: None,
-                in_reply_to: None,
-                payload: Payload::Gossip { 
-                    seen: self.seen
-                        .iter()
-                        .copied()
-                        .filter(|x| !known_to_n.contains(x))
-                        .collect()
+    fn create_gossip(&self, node: &String) -> Option<Message<Payload>> {
+        let known_by_n = &self.known[node];
+        let not_known_by_n: Vec<usize> = self.seen
+            .iter()
+            .copied()
+            .filter(|x| !known_by_n.contains(x))
+            .collect();
+        if !not_known_by_n.is_empty() {
+            Some(Message {
+                src: self.node_id.clone(),
+                dst: node.clone(),
+                body: Body {
+                    msg_id: None,
+                    in_reply_to: None,
+                    payload: Payload::Gossip { 
+                        seen: not_known_by_n,                
+                    }
                 }
-            }
-        }
+            })
+        } else { None }
     }
 }
 

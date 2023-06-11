@@ -60,7 +60,7 @@ Run:
 ```
 
 #### 3b - Multi-Node
-Considerando que as mensagens enviadas sejam compartilhadas pelos Nodes da estrutura.
+Considerar que as mensagens enviadas sejam compartilhadas pelos Nodes da estrutura.
 
 Run:
 ```
@@ -68,9 +68,25 @@ Run:
 ```
 
 #### 3c - Fault Tolerant
-Considerando que os Nodes possam ficar sem se comunicar por certos períodos de tempo. 
+Considerar que os Nodes possam ficar sem se comunicar por certos períodos de tempo. 
 
 Run:
 ```
 ./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
+```
+
+#### 3d e 3e - Efficient Broadcast
+Considerando tanto multi-node quanto cenário de fault tolerant, agora será requerido que o sistema esteja dentro de algumas métricas. 
+
+Os resultados do código foram:
+
+|Métricas|Esperado|Resultado |
+|--------|--------|----------|
+| Messages-per-operation |  < 30    | 4    |
+| Latência média         | < 400 ms | 4ms  |
+| Latência máxima        | < 600 ms | 15ms |
+
+Run:
+```
+./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --nemesis partition
 ```
