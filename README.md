@@ -1,4 +1,4 @@
-# Maelstrom ChaUllenges
+# Maelstrom Challenges
 Solução dos exercícios de Sistemas Distribuidos disponíveis em [fly.io/dist-sys](https://fly.io/dist-sys/)
 
 Baseado no vídeo do Jon Gjengset ([link](https://www.youtube.com/watch?v=gboGyccRVXI))
