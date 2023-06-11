@@ -26,25 +26,27 @@ Event {
 ```
 
 ## #1 Echo
-Implementar um sistema que receba e devolva o pacote. O tipo da mensagem deverá ser alterado de 'echo' para 'echo_ok'.
+Implementar um sistema simples de echo que receba e devolva o pacote alterando apenas o tipo da mensagem para 'echo_ok'.
 
 [solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/dist-sys-rust/src/bin/echo.rs)
 
-Run:
-```
-./maelstrom/maelstrom test -w echo --bin dist-sys-rust/target/debug/echo --node-count 1 --time-limit 10 
-```
+|System specification |   |
+|:-------------------:|:-:|
+| Nodes      | 1 |
+| Time limit | 10s |
 
 ## #2 Unique Id
-Utilizando do mesma sistema anterior responder a mensagem 'generate' com 'generate_ok' retornando um Id único global.
+Implementar um sistema que gere Id únicos. O sistema deverá continuar operando durante falhas na rede, servindo sempre com total disponibilidade.
 
 [solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/dist-sys-rust/src/bin/unique_id.rs)
 
-Run:
-```
-./maelstrom/maelstrom test -w unique-ids --bin dist-sys-rust/target/debug/unique_id --time-limit 30 --rate 1000 --node-count 3 --availability total --nemesis partition
-```
-
+|System specification |   |
+|:-------------------:|:-:|
+| Nodes        | 3 | 
+| Time limit   | 30s |
+| Message rate | 1000 per second |
+| Nemesis      | Partition Network |
+| Check        | Total avaibility |
 
 ## #3 Broadcast
 Implementar um sitema de broadcast para uma mensagem circular entre todos os nodes do cluster.
@@ -54,39 +56,46 @@ Implementar um sitema de broadcast para uma mensagem circular entre todos os nod
 #### 3a - Single-Node
 Primeiro cenário apenas considerando um sistema de um Node.
 
-Run:
-```
-./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 1 --time-limit 20 --rate 10
-```
+|System specification |   |
+|:-------------------:|:-:|
+| Nodes        | 1 | 
+| Time limit   | 20s |
+| Message rate | 10 per second |
 
 #### 3b - Multi-Node
 Considerar que as mensagens enviadas sejam compartilhadas pelos Nodes da estrutura.
 
-Run:
-```
-./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 5 --time-limit 20 --rate 10
-```
+|System specification |   |
+|:-------------------:|:-:|
+| Nodes        | 5 | 
+| Time limit   | 20s |
+| Message rate | 10 per second |
 
 #### 3c - Fault Tolerant
-Considerar que os Nodes possam ficar sem se comunicar por certos períodos de tempo. 
+Considerar que os Nodes possam ficar sem se comunicar por certos períodos de tempo devido falhas na rede. 
 
-Run:
-```
-./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
-```
+|System specification |   |
+|:-------------------:|:-:|
+| Nodes        | 5 | 
+| Time limit   | 20s |
+| Message rate | 10 per second |
+| Nemesis      | Partition Network |
 
 #### 3d e 3e - Efficient Broadcast
-Considerando tanto multi-node quanto cenário de fault tolerant, agora será requerido que o sistema esteja dentro de algumas métricas. 
+O sistema será posto à prova, sendo requerido que esteja dentro de algumas métricas de latência. 
 
-Os resultados do código foram:
+|System specification |   |
+|:-------------------:|:-:|
+| Nodes        | 25 | 
+| Time limit   | 20s |
+| Message rate | 100 per second |
+| Latency      | 100ms |
+| Nemesis      | Partition Network (optional) |
 
-|Métricas|Esperado|Resultado |
-|--------|--------|----------|
-| Messages-per-operation |  < 30    | 4    |
-| Latência média         | < 400 ms | 4ms  |
-| Latência máxima        | < 600 ms | 15ms |
+Abaixo os resultados obtidos:
 
-Run:
-```
-./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --nemesis partition
-```
+|Métricas|Esperado|Resultado|Com Network Partition|
+|--------|:------:|:-------:|:-------------------:|
+| Messages-per-operation |  < 30   | 4     | 4     |
+| Latência média         | < 400ms | 1.5ms | 1.6ms |
+| Latência máxima        | < 600ms | 2.3ms | 8.8ms |
