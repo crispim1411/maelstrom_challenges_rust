@@ -101,12 +101,13 @@ fn main() -> anyhow::Result<()> {
     };
     
     let mut node = Node::from_init(init_msg);
+        
     let mut reply = msg.into_reply(Some(0));
     reply.body.payload = InitPayload::InitOk;
     reply.send(&mut stdout)?;
 
     for line in stdin {
-            let input: Message<Payload> = serde_json::from_str(&line?)?;
+        let input: Message<Payload> = serde_json::from_str(&line?)?;
         node.process(input, &mut stdout)
             .unwrap_or_else(|_| panic!("Error processing message at Node {}", node.node_id));
         node.id += 1;
