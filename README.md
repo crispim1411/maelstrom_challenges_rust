@@ -66,3 +66,11 @@ Run:
 ```
 ./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 5 --time-limit 20 --rate 10
 ```
+
+#### 3c - Fault Tolerant
+Considerando que os Nodes possam ficar sem se comunicar por certos períodos de tempo. 
+
+Run:
+```
+./maelstrom/maelstrom test -w broadcast --bin dist-sys-rust/target/debug/broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
+```

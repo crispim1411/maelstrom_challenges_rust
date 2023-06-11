@@ -1,6 +1,6 @@
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
-use std::io::{self, StdoutLock, Write, BufRead};
+use std::io::{self, StdoutLock, Write, Lines, StdinLock};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -87,30 +87,34 @@ impl Node {
 }
 
 fn main() -> anyhow::Result<()> {
-    let stdin = io::stdin().lock();
-    let mut stdout = io::stdout().lock();
+    let stdin = io::stdin();
+    let stdout = io::stdout();
+
     let mut stdin = stdin.lines();
 
-    let msg: Message<InitPayload> = serde_json::from_str(
-        &stdin
-        .next()
-        .expect("no message received")?)?;
-
-    let InitPayload::Init(init_msg) = msg.body.payload.clone() else {
-        panic!("Expected init message");
-    };
-    
+    let init_msg = wait_for_initialization(&mut stdin, &mut stdout.lock())
+        .expect("Expected init message");
     let mut node = Node::from_init(init_msg);
         
-    let mut reply = msg.into_reply(Some(0));
-    reply.body.payload = InitPayload::InitOk;
-    reply.send(&mut stdout)?;
-
     for line in stdin {
         let input: Message<Payload> = serde_json::from_str(&line?)?;
-        node.process(input, &mut stdout)
+        node.process(input, &mut stdout.lock())
             .unwrap_or_else(|_| panic!("Error processing message at Node {}", node.node_id));
         node.id += 1;
     }
     Ok(())
+}
+
+fn wait_for_initialization(input: &mut Lines<StdinLock>, output: &mut StdoutLock) -> anyhow::Result<Init> {
+    let msg: Message<InitPayload> = serde_json::from_str(
+        &input
+        .next()
+        .expect("no message received")?)?;
+    let InitPayload::Init(init_msg) = msg.body.payload.clone() else {
+        bail!("Expected init message")
+    };
+    let mut reply = msg.into_reply(Some(0));
+    reply.body.payload = InitPayload::InitOk;
+    reply.send(output)?;
+    Ok(init_msg)
 }

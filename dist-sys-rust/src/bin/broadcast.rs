@@ -4,7 +4,7 @@ use std::sync::mpsc;
 use std::collections::{HashMap, HashSet};
 use std::thread;
 use std::time::Duration;
-use std::io::{StdoutLock, Write, self};
+use std::io::{StdoutLock, Write, self, StdinLock, Lines};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Message<T> {
@@ -73,7 +73,7 @@ struct Init {
 enum Event {
     Message(Message<Payload>),
     Gossip,
-    EOF,
+    Eof,
 }
 
 #[derive(Default)]
@@ -143,7 +143,7 @@ impl Node {
 
     fn handle_event(&mut self, event: Event, output: &mut StdoutLock) -> anyhow::Result<()> {
         match event { 
-            Event::EOF => {}
+            Event::Eof => {}
             Event::Message(msg) => {
                 self.process(msg, output)?;
             }
@@ -179,25 +179,13 @@ impl Node {
 
 fn main() -> anyhow::Result<()> {
     let stdin = io::stdin();
-    let mut stdout = io::stdout().lock();
+    let stdout = io::stdout();
     let (tx, rx) = mpsc::channel();
 
-    let mut stdin = stdin.lines();
-    let msg: Message<InitPayload> = serde_json::from_str(
-        &stdin
-        .next()
-        .expect("no message received")?)?;
-    let InitPayload::Init(init_msg) = &msg.body.payload else {
-        panic!("Expected init message");
-    };
+    let init_msg = wait_for_initialization(&mut stdin.lines(), &mut stdout.lock())
+        .expect("Expected init message");
+    let mut node = Node::from_init(init_msg, tx.clone());
 
-    let mut node = Node::from_init(init_msg.clone(), tx.clone());
-
-    let mut reply = msg.into_reply(Some(0));
-    reply.body.payload = InitPayload::InitOk;
-    reply.send(&mut stdout)?;
-    
-    drop(stdin);
     let main_thread = thread::spawn(move || {
         let stdin = io::stdin();
         for line in stdin.lines() {
@@ -208,17 +196,31 @@ fn main() -> anyhow::Result<()> {
                 bail!("Error tx send");
             };
         }
-        let _ = tx.send(Event::EOF);
+        let _ = tx.send(Event::Eof);
         Ok(())
     });
 
     for event in rx  {
         node
-            .handle_event(event, &mut stdout)
+            .handle_event(event, &mut stdout.lock())
             .expect("node failed processing message");
     }
 
     main_thread.join().expect("Error running main thread")?;
 
     Ok(())
+}
+
+fn wait_for_initialization(input: &mut Lines<StdinLock>, output: &mut StdoutLock) -> anyhow::Result<Init> {
+    let msg: Message<InitPayload> = serde_json::from_str(
+        &input
+        .next()
+        .expect("no message received")?)?;
+    let InitPayload::Init(init_msg) = msg.body.payload.clone() else {
+        bail!("Expected init message")
+    };
+    let mut reply = msg.into_reply(Some(0));
+    reply.body.payload = InitPayload::InitOk;
+    reply.send(output)?;
+    Ok(init_msg)
 }
