@@ -1,10 +1,13 @@
 use anyhow::bail;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::mpsc;
-use std::collections::{HashMap, HashSet};
 use std::thread;
-use std::time::Duration;
 use std::io::{StdoutLock, Write, self, StdinLock, Lines};
+
+const LIN_KV: &str = "lin-kv";
+const KEY: &str = "counter";
+const ERROR_MSG: &str = r"current value (?P<current>\d+) is not (?P<expected>\d+)";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Message<T> {
@@ -45,14 +48,22 @@ struct Body<T> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
-enum Payload  {
-    Read,
-    ReadOk { messages: Vec<usize> },
-    Broadcast { message: usize },
-    BroadcastOk,
-    Topology { topology: HashMap<String, Vec<String>> },
-    TopologyOk,
-    Gossip { seen: Vec<usize> }
+enum Payload {
+    Read { key: Option<String> },
+    ReadOk { value: usize },
+    Add { delta: usize },
+    AddOk,
+    Cas { 
+        key: String,
+        from: usize, 
+        to:usize,
+        create_if_not_exists: bool,
+    },
+    CasOk,
+    Error {
+        code: usize,
+        text: String,
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,70 +83,69 @@ struct Init {
 #[derive(Debug, Clone)]
 enum Event {
     Message(Message<Payload>),
-    Gossip,
+    Read,
+    Cas(usize),
     Eof,
 }
 
-#[derive(Default)]
 struct Node {
     id: usize, 
     node_id: String,
-    seen: HashSet<usize>,
-    known: HashMap<String, HashSet<usize>>,
-    neighborhood: Vec<String>, 
+    event_sender: mpsc::Sender<Event>,
+    counter: usize,
+    last_value: usize,
 }
 
 impl Node {
     fn from_init(message: Init, tx: mpsc::Sender<Event>) -> Self {
-        thread::spawn(move || {
-            loop { 
-                thread::sleep(Duration::from_millis(300));
-                if tx.send(Event::Gossip).is_err() {
-                    break;
-                }
-            }
-        });
         Node {
             id: 1,
             node_id: message.node_id,
-            seen:HashSet::new(),
-            known: message
-                .node_ids
-                .into_iter()
-                .map(|node_id| (node_id, HashSet::new()))
-                .collect(),
-            neighborhood: Vec::new(),
+            event_sender: tx,
+            counter: 0,
+            last_value: 0,
         }
     }
 
     fn process(&mut self, msg: Message<Payload>, output: &mut StdoutLock) -> anyhow::Result<()> {
         let mut reply = msg.into_reply(Some(self.id));
         match reply.body.payload {
-            Payload::Read => {
+            Payload::Read { .. } => {
                 reply.body.payload = Payload::ReadOk { 
-                    messages: self.seen
-                        .iter()
-                        .copied()
-                        .collect(), 
+                    value: self.counter
                 };
                 reply.send(output)?;
+                self.event_sender.send(Event::Read)?;
             }
-            Payload::Broadcast { message } => {
-                self.seen.insert(message);
-                reply.body.payload = Payload::BroadcastOk;
+            Payload::Add { delta } => {
+                if delta > 0 {
+                    self.last_value = delta;
+                    self.event_sender.send(Event::Cas(delta))?;    
+                }
+                reply.body.payload = Payload::AddOk;
                 reply.send(output)?;
             }
-            Payload::Topology { mut topology } => {
-                self.neighborhood = topology
-                    .remove(&self.node_id)
-                    .unwrap_or_else(|| panic!("No topology sent to Node {}", self.node_id));
-                reply.body.payload = Payload::TopologyOk; 
-                reply.send(output)?;
+            Payload::ReadOk { value } => {
+                self.counter = value;
             }
-            Payload::Gossip { seen } => {
-                self.seen.extend(seen);
+            Payload::CasOk => {
+                self.event_sender.send(Event::Read)?;
             }
-            Payload::ReadOk { .. } | Payload::BroadcastOk | Payload::TopologyOk => {}
+            Payload::Error { code, text } => {
+                if code == 20 {
+                    self.event_sender.send(Event::Cas(0))?;
+                }
+                else if code == 22 {
+                    let re = Regex::new(ERROR_MSG).unwrap();
+                    if let Some(matches) = re.captures(&text) {
+                        if let Ok(current_value) = matches["current"].parse::<usize>() {
+                            self.counter = current_value;
+                        }
+                        self.event_sender.send(Event::Cas(self.last_value))?;
+                    } 
+                }
+            }
+            Payload::AddOk | Payload::Cas { .. } => {},
         }
         self.id += 1;
         Ok(())
@@ -144,40 +154,42 @@ impl Node {
     fn handle_event(&mut self, event: Event, output: &mut StdoutLock) -> anyhow::Result<()> {
         match event { 
             Event::Eof => {}
+            Event::Cas(delta) => {
+                let message = Message {
+                    src: self.node_id.clone(),
+                    dst: "lin-kv".to_string(),
+                    body: Body { 
+                        msg_id: None, 
+                        in_reply_to: None, 
+                        payload: Payload::Cas { 
+                            key: KEY.to_string(),
+                            from: self.counter, 
+                            to: self.counter + delta,
+                            create_if_not_exists: true
+                        }
+                    }
+                };
+                message.send(output)?;
+            }
+            Event::Read => {
+                let message = Message {
+                    src: self.node_id.clone(),
+                    dst: LIN_KV.to_string(),
+                    body: Body { 
+                        msg_id: None, 
+                        in_reply_to: None, 
+                        payload: Payload::Read {
+                            key: Some(KEY.to_string())
+                        }
+                    }
+                };
+                message.send(output)?;
+            }
             Event::Message(msg) => {
                 self.process(msg, output)?;
             }
-            Event::Gossip => {
-                for node in &self.neighborhood {
-                    if let Some(gossip) = self.create_gossip(node) {
-                        gossip.send(output)?;
-                    }
-                }
-            }
         }
         Ok(())
-    }
-
-    fn create_gossip(&self, node: &String) -> Option<Message<Payload>> {
-        let known_by_n = &self.known[node];
-        let not_known_by_n: Vec<usize> = self.seen
-            .iter()
-            .copied()
-            .filter(|x| !known_by_n.contains(x))
-            .collect();
-        if !not_known_by_n.is_empty() {
-            Some(Message {
-                src: self.node_id.clone(),
-                dst: node.clone(),
-                body: Body {
-                    msg_id: None,
-                    in_reply_to: None,
-                    payload: Payload::Gossip { 
-                        seen: not_known_by_n,                
-                    }
-                }
-            })
-        } else { None }
     }
 }
 

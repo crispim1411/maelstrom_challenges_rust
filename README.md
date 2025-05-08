@@ -3,6 +3,11 @@ Solução dos exercícios de Sistemas Distribuidos disponíveis em [fly.io/dist-
 
 Baseado no vídeo do Jon Gjengset ([link](https://www.youtube.com/watch?v=gboGyccRVXI))
 
+### Dependências Maelstrom Server
+- Java 11 or acima
+- gnuplot 
+- graphviz
+
 #### Estrutura das mensagens 
 ```rust
 Message<T> {
@@ -99,3 +104,8 @@ Abaixo os resultados obtidos:
 | Messages-per-operation |  < 30   | 4     | 4     |
 | Latência média         | < 400ms | 1.5ms | 1.6ms |
 | Latência máxima        | < 600ms | 2.3ms | 8.8ms |
+
+## #4 Grow-Only Counter
+Implementar um contador sem estado que irá utilizar de um key/value store sequencialmente consistente. 
+
+[Solução](https://github.com/crispim1411/maelstrom_challenges_rust/blob/master/dist-sys-rust/src/bin/grow_counter.rs)
